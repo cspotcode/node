@@ -3132,7 +3132,9 @@ void Isolate::Deinit() {
 #endif  // V8_ENABLE_WEBASSEMBLY
 
   if (concurrent_recompilation_enabled()) {
+    printf("starting optimizing_compile_dispatcher_->Stop();\n");
     optimizing_compile_dispatcher_->Stop();
+    printf("finished optimizing_compile_dispatcher_->Stop();\n");
     delete optimizing_compile_dispatcher_;
     optimizing_compile_dispatcher_ = nullptr;
   }

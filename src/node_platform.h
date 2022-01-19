@@ -83,6 +83,8 @@ class PerIsolatePlatformData :
 
   bool HasPendingBackgroundTasks();
 
+  void WaitForNonDelayedForegroundTasks();
+
   const uv_loop_t* event_loop() const { return loop_; }
 
  private:

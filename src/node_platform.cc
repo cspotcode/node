@@ -464,7 +464,7 @@ bool PerIsolatePlatformData::HasPendingBackgroundTasks() {
 }
 
 void PerIsolatePlatformData::WaitForNonDelayedForegroundTasks() {
-  foreground_tasks_->Wait();
+  foreground_tasks_.Wait();
 }
 
 bool PerIsolatePlatformData::FlushForegroundTasksInternal() {
@@ -593,7 +593,7 @@ void TaskQueue<T>::Push(std::unique_ptr<T> task) {
 }
 
 template <class T>
-std::unique_ptr<T> TaskQueue<T>::Wait() {
+void TaskQueue<T>::Wait() {
   Mutex::ScopedLock scoped_lock(lock_);
   while (task_queue_.empty() && !stopped_) {
     tasks_available_.Wait(scoped_lock);
