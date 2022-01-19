@@ -441,10 +441,30 @@ void NodePlatform::DrainTasks(Isolate* isolate) {
   std::shared_ptr<PerIsolatePlatformData> per_isolate = ForNodeIsolate(isolate);
   if (!per_isolate) return;
 
-  do {
-    // Worker tasks aren't associated with an Isolate.
-    worker_thread_task_runner_->BlockingDrain();
-  } while (per_isolate->FlushForegroundTasksInternal());
+  // Note: does not execute delayed tasks
+  while(true) {
+    bool has_background_tasks = per_isolate->HasPendingBackgroundTasks();
+    bool did_foreground_work = per_isolate->FlushForegroundTasksInternal();
+
+    // Guaranteed no tasks remain, because background had nothing and foreground cannot possibly have posted to background
+    if(!has_background_tasks && !did_foreground_work) break;
+
+    // Background work is in-progress, and we're sure we did not execute the resulting tasks on the foreground.
+    // Wait for them to arrive
+    if(has_background_tasks && !did_foreground_work) {
+      per_isolate->WaitForNonDelayedForegroundTasks();
+    }
+
+    // Only unaccounted possibility is that we did_foreground_work; loop again
+  }
+}
+
+bool PerIsolatePlatformData::HasPendingBackgroundTasks() {
+  return isolate_->HasPendingBackgroundTasks();
+}
+
+void PerIsolatePlatformData::WaitForNonDelayedForegroundTasks() {
+  foreground_tasks_->Wait();
 }
 
 bool PerIsolatePlatformData::FlushForegroundTasksInternal() {
@@ -570,6 +590,14 @@ void TaskQueue<T>::Push(std::unique_ptr<T> task) {
   outstanding_tasks_++;
   task_queue_.push(std::move(task));
   tasks_available_.Signal(scoped_lock);
+}
+
+template <class T>
+std::unique_ptr<T> TaskQueue<T>::Wait() {
+  Mutex::ScopedLock scoped_lock(lock_);
+  while (task_queue_.empty() && !stopped_) {
+    tasks_available_.Wait(scoped_lock);
+  }
 }
 
 template <class T>
