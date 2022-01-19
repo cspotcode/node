@@ -29,6 +29,7 @@ class TaskQueue {
   std::unique_ptr<T> Pop();
   std::unique_ptr<T> BlockingPop();
   std::queue<std::unique_ptr<T>> PopAll();
+  void Wait();
   void NotifyOfCompletion();
   void BlockingDrain();
   void Stop();
@@ -79,6 +80,10 @@ class PerIsolatePlatformData :
   // posted during flushing of the queue are postponed until the next
   // flushing.
   bool FlushForegroundTasksInternal();
+
+  bool HasPendingBackgroundTasks();
+
+  void WaitForNonDelayedForegroundTasks();
 
   const uv_loop_t* event_loop() const { return loop_; }
 
